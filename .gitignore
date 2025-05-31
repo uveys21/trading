@@ -28,6 +28,7 @@ local.properties
 *.log
 
 echo "java_pid*.hprof" >> .gitignore
+echo "*.hprof" >> .gitignore
 
 
 # Android Studio Navigation editor files
