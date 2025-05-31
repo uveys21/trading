@@ -264,9 +264,9 @@ fun HomeScreen(
                     LazyColumn {
                         items(uiState.positions) { position ->
                             // Position'dan profit bilgisini hesapla (varsayılan değerler)
-                            val unrealizedProfit = position.unrealizedProfit?.toDoubleOrNull() ?: 0.0
+                            val unrealizedProfit = position.unrealizedProfit.toDouble()
                             val profitColor = if (unrealizedProfit >= 0) Color.Green else Color.Red
-                            val profitPercentage = position.profitPercentage?.toDoubleOrNull() ?: 0.0
+                            val profitPercentage = position.profitPercentage.toDouble()
 
                             Row(
                                 modifier = Modifier
