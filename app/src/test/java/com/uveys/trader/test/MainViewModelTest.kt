@@ -44,14 +44,15 @@ class MainViewModelTest {
     private lateinit var mockSecurePreferencesManager: SecurePreferencesManager
 
     @Before
-    fun setup() {
+    fun setup() = runTest {
         Dispatchers.setMain(testDispatcher)
         
         mockManualTradingUseCase = mock(ManualTradingUseCase::class.java)
         mockStrategyUseCase = mock(TripleConfirmationStrategyUseCase::class.java)
-        mockBinanceRepository = mock(com.uveys.trader.domain.repository.BinanceRepository::class.java)
         mockSecurePreferencesManager = mock(SecurePreferencesManager::class.java)
+        mockBinanceRepository = mock(com.uveys.trader.domain.repository.BinanceRepository::class.java)
 
+        // Mock suspend functions
         whenever(mockBinanceRepository.getAccountBalance()).thenReturn(java.math.BigDecimal.ZERO)
         whenever(mockBinanceRepository.getOpenPositions()).thenReturn(emptyList())
         whenever(mockBinanceRepository.getOrderHistory(any(), any())).thenReturn(emptyList())
