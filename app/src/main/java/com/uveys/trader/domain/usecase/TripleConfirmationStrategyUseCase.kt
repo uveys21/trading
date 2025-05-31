@@ -66,11 +66,11 @@ class TripleConfirmationStrategyUseCase @Inject constructor(
             .map { latestCandle ->
                 val historicalCandles = binanceRepository.getKlines(symbol, DEFAULT_INTERVAL, DEFAULT_CANDLE_LIMIT)
                 
-                val allCandles = if (historicalCandles.isNotEmpty() && historicalCandles.last().openTime == latestCandle.openTime) {
-                    Timber.d("Latest candle from stream has the same openTime as the last historical candle. Replacing last historical with latest.")
+                val allCandles = if (historicalCandles.isNotEmpty() && historicalCandles.last().closeTime == latestCandle.closeTime) {
+                    Timber.d("Latest candle from stream has the same closeTime as the last historical candle. Replacing last historical with latest.")
                     historicalCandles.dropLast(1) + latestCandle
-                } else if (historicalCandles.isNotEmpty() && historicalCandles.last().openTime > latestCandle.openTime) {
-                    Timber.w("Latest candle from stream (openTime: ${latestCandle.openTime}) is older than the last historical candle (openTime: ${historicalCandles.last().openTime}). Using historical candles only.")
+                } else if (historicalCandles.isNotEmpty() && historicalCandles.last().closeTime > latestCandle.closeTime) {
+                    Timber.w("Latest candle from stream (closeTime: ${latestCandle.closeTime}) is older than the last historical candle (closeTime: ${historicalCandles.last().closeTime}). Using historical candles only.")
                     historicalCandles
                 } else {
                     historicalCandles + latestCandle
