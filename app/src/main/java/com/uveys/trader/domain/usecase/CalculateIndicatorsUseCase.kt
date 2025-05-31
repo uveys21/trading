@@ -79,11 +79,11 @@ class CalculateIndicatorsUseCase @Inject constructor() {
         val series = BaseBarSeries()
 
         for (candle in candles) {
-            val openZonedDateTime = Instant.ofEpochMilli(candle.openTime)
+            val barEndTime = Instant.ofEpochMilli(candle.closeTime)
                 .atZone(ZoneId.systemDefault())
 
             series.addBar(
-                openZonedDateTime,
+                barEndTime,
                 DecimalNum.valueOf(candle.open),
                 DecimalNum.valueOf(candle.high),
                 DecimalNum.valueOf(candle.low),

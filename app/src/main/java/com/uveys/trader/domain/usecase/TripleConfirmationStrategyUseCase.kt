@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.map
 import java.math.BigDecimal
 import javax.inject.Inject
 import kotlinx.coroutines.delay
+import timber.log.Timber
 import javax.inject.Singleton
 
 @Singleton
@@ -63,16 +64,25 @@ class TripleConfirmationStrategyUseCase @Inject constructor(
     fun analyzeStrategyStream(symbol: String): Flow<TradingSignal> {
         return binanceRepository.getKlinesStream(symbol, DEFAULT_INTERVAL)
             .map { latestCandle ->
-                // Son mum verisini aldıktan sonra geçmiş verileri de al
                 val historicalCandles = binanceRepository.getKlines(symbol, DEFAULT_INTERVAL, DEFAULT_CANDLE_LIMIT)
                 
-                // Tüm mumları birleştir
-                val allCandles = historicalCandles + latestCandle
+                val allCandles = if (historicalCandles.isNotEmpty() && historicalCandles.last().openTime == latestCandle.openTime) {
+                    Timber.d("Latest candle from stream has the same openTime as the last historical candle. Replacing last historical with latest.")
+                    historicalCandles.dropLast(1) + latestCandle
+                } else if (historicalCandles.isNotEmpty() && historicalCandles.last().openTime > latestCandle.openTime) {
+                    Timber.w("Latest candle from stream (openTime: ${latestCandle.openTime}) is older than the last historical candle (openTime: ${historicalCandles.last().openTime}). Using historical candles only.")
+                    historicalCandles
+                } else {
+                    historicalCandles + latestCandle
+                }
                 
-                // Teknik göstergeleri hesapla
+                if (allCandles.isEmpty()) {
+                    Timber.w("No candle data available for $symbol on $DEFAULT_INTERVAL after processing stream update.")
+                    return@map TradingSignal.NEUTRAL
+                }
+
                 val indicators = calculateIndicatorsUseCase.execute(allCandles, symbol, DEFAULT_INTERVAL)
                 
-                // Sinyalleri kontrol et
                 when {
                     indicators.isLongSignal() -> TradingSignal.LONG
                     indicators.isShortSignal() -> TradingSignal.SHORT

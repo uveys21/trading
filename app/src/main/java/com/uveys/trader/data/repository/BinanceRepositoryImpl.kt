@@ -260,7 +260,13 @@ class BinanceRepositoryImpl @Inject constructor(
     }
 
     override suspend fun ping(): Boolean {
-        TODO("Not yet implemented")
+        return try {
+            apiService.getPrice("BTCUSDT") // Attempt to get price for BTCUSDT
+            true // If the call above does not throw an exception, consider ping successful
+        } catch (e: Exception) {
+            Timber.e(e, "Ping failed") // Log the exception
+            false // If any exception occurs during the API call, consider ping failed
+        }
     }
 
     /**
