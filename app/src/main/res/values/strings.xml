@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Uveys Trader</string>
+    <string name="app_description">Binance Futures API kullanarak teknik göstergelere dayalı kripto alım-satım uygulaması</string>
+    <string name="login_title">Binance Futures API Bilgileri</string>
+    <string name="api_key_hint">API Key</string>
+    <string name="api_secret_hint">API Secret</string>
+    <string name="login_button">Giriş Yap</string>
+    <string name="demo_button">Demo Modu</string>
+    <string name="security_info">API anahtarlarınız cihazınızda güvenli bir şekilde saklanır ve Binance dışında hiçbir sunucuya gönderilmez.</string>
+    <string name="home_tab">Ana Sayfa</string>
+    <string name="trading_tab">İşlem</string>
+    <string name="portfolio_tab">Portföy</string>
+    <string name="settings_tab">Ayarlar</string>
+</resources>

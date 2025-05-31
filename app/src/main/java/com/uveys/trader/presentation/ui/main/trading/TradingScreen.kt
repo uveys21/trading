@@ -1,0 +1,331 @@
+package com.uveys.trader.presentation.ui.main.trading
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import com.uveys.trader.domain.entity.OrderSide
+import com.uveys.trader.domain.entity.PositionSide
+import com.uveys.trader.presentation.viewmodel.MainUiState
+import com.uveys.trader.domain.usecase.TradingSignal
+import java.math.BigDecimal
+
+
+/**
+ * İşlem ekranı - Manuel alım/satım emirleri oluşturma
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TradingScreen(
+    uiState: MainUiState,
+    onPlaceOrder: (String, OrderSide, PositionSide, BigDecimal?, BigDecimal) -> Unit
+) {
+    var selectedSymbol by remember { mutableStateOf(uiState.value.selectedSymbol) }
+    var showSymbolDialog by remember { mutableStateOf(false) }
+    
+    var orderType by remember { mutableStateOf("MARKET") }
+    var positionSide by remember { mutableStateOf(PositionSide.LONG) }
+    var quantity by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
+    
+    val scrollState = rememberScrollState()
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(scrollState)
+    ) {
+        // Teknik göstergeler kartı
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Teknik Göstergeler - $selectedSymbol",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Button(onClick = { showSymbolDialog = true }) {
+                        Text("Parite Değiştir")
+                    }
+                    
+                    // Sinyal göstergesi
+                    val signalColor = when (uiState.currentSignal) {
+                        TradingSignal.LONG -> Color.Green
+                        TradingSignal.SHORT -> Color.Red
+                        TradingSignal.NEUTRAL -> Color.Gray
+                        else -> Color.Gray
+                    }
+                    
+                    val signalText = when (uiState.currentSignal) {
+                        TradingSignal.LONG -> "LONG"
+                        TradingSignal.SHORT -> "SHORT"
+                        TradingSignal.NEUTRAL -> "NÖTR"
+                        else -> "NÖTR"
+                    }
+                    
+                    Text(
+                        text = "Sinyal: $signalText",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = signalColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Teknik gösterge değerleri
+                // Not: Gerçek uygulamada bu değerler MainViewModel'den alınacak
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "EMA (50)",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "EMA (200)",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "28,450.25",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "27,980.10",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "RSI (14)",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "MACD",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "58.25",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "125.45",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+        
+        // Manuel işlem kartı
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Manuel İşlem",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                // Emir tipi seçimi
+                Text(
+                    text = "Emir Tipi",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = orderType == "MARKET",
+                        onClick = { orderType = "MARKET" },
+                        label = { Text("Market") }
+                    )
+                    
+                    FilterChip(
+                        selected = orderType == "LIMIT",
+                        onClick = { orderType = "LIMIT" },
+                        label = { Text("Limit") }
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Pozisyon yönü seçimi
+                Text(
+                    text = "Pozisyon Yönü",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = positionSide == PositionSide.LONG,
+                        onClick = { positionSide = PositionSide.LONG },
+                        label = { Text("LONG") }
+                    )
+                    
+                    FilterChip(
+                        selected = positionSide == PositionSide.SHORT,
+                        onClick = { positionSide = PositionSide.SHORT },
+                        label = { Text("SHORT") }
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Miktar girişi
+                OutlinedTextField(
+                    value = quantity,
+                    onValueChange = { quantity = it },
+                    label = { Text("Miktar") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Limit emri için fiyat girişi
+                if (orderType == "LIMIT") {
+                    OutlinedTextField(
+                        value = price,
+                        onValueChange = { price = it },
+                        label = { Text("Fiyat") },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+                
+                // İşlem butonları
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            if (quantity.isNotEmpty()) {
+                                val side = if (positionSide == PositionSide.LONG) OrderSide.BUY else OrderSide.SELL
+                                val priceValue = if (orderType == "LIMIT" && price.isNotEmpty()) {
+                                    BigDecimal(price)
+                                } else {
+                                    null
+                                }
+                                onPlaceOrder(
+                                    selectedSymbol,
+                                    side,
+                                    positionSide,
+                                    priceValue,
+                                    BigDecimal(quantity)
+                                )
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = quantity.isNotEmpty() && (orderType != "LIMIT" || price.isNotEmpty())
+                    ) {
+                        Text("İşlemi Gerçekleştir")
+                    }
+                }
+                
+                // Son işlem sonucu
+                if (uiState.lastTradeResult.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = uiState.lastTradeResult,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+    
+    // Sembol seçim dialogu
+    if (showSymbolDialog) {
+        val symbols = listOf("BTCUSDT", "ETHUSDT", "BNBUSDT", "ADAUSDT", "DOGEUSDT", "XRPUSDT")
+        
+        AlertDialog(
+            onDismissRequest = { showSymbolDialog = false },
+            title = { Text("Parite Seç") },
+            text = {
+                Column {
+                    symbols.forEach { symbol ->
+                        TextButton(
+                            onClick = {
+                                selectedSymbol = symbol
+                                showSymbolDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(symbol)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSymbolDialog = false }) {
+                    Text("İptal")
+                }
+            }
+        )
+    }
+}
+
+
