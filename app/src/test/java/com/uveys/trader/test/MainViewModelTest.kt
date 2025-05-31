@@ -40,6 +40,7 @@ class MainViewModelTest {
     private lateinit var viewModel: MainViewModel
     private lateinit var mockManualTradingUseCase: ManualTradingUseCase
     private lateinit var mockStrategyUseCase: TripleConfirmationStrategyUseCase
+    private lateinit var mockBinanceRepository: com.uveys.trader.domain.repository.BinanceRepository
     private lateinit var mockSecurePreferencesManager: SecurePreferencesManager
 
     @Before
@@ -48,11 +49,18 @@ class MainViewModelTest {
         
         mockManualTradingUseCase = mock(ManualTradingUseCase::class.java)
         mockStrategyUseCase = mock(TripleConfirmationStrategyUseCase::class.java)
+        mockBinanceRepository = mock(com.uveys.trader.domain.repository.BinanceRepository::class.java)
         mockSecurePreferencesManager = mock(SecurePreferencesManager::class.java)
+
+        whenever(mockBinanceRepository.getAccountBalance()).thenReturn(java.math.BigDecimal.ZERO)
+        whenever(mockBinanceRepository.getOpenPositions()).thenReturn(emptyList())
+        whenever(mockBinanceRepository.getOrderHistory(any(), any())).thenReturn(emptyList())
+        whenever(mockBinanceRepository.ping()).thenReturn(true) // For the init block connectivity check
         
         viewModel = MainViewModel(
             mockManualTradingUseCase,
             mockStrategyUseCase,
+            mockBinanceRepository,
             mockSecurePreferencesManager
         )
     }
