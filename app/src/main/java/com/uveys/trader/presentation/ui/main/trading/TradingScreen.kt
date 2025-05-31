@@ -28,7 +28,7 @@ fun TradingScreen(
     uiState: MainUiState,
     onPlaceOrder: (String, OrderSide, PositionSide, BigDecimal?, BigDecimal) -> Unit
 ) {
-    var selectedSymbol by remember { mutableStateOf(uiState.value.selectedSymbol) }
+    var selectedSymbol by remember { mutableStateOf(uiState.selectedSymbol) }
     var showSymbolDialog by remember { mutableStateOf(false) }
     
     var orderType by remember { mutableStateOf("MARKET") }
