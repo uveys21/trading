@@ -57,6 +57,7 @@ class MainViewModel @Inject constructor(
     private var strategyJob: Job? = null
 
     init {
+        Timber.d("MainViewModel initialized")
         loadInitialData()
 
         // Bağlantı durumunu düzenli olarak kontrol et
@@ -123,6 +124,8 @@ class MainViewModel @Inject constructor(
      * Stratejiyi başlatır
      */
     fun startStrategy(symbol: String) {
+        Timber.d("startStrategy function entry point")
+        Timber.d("startStrategy called with symbol: $symbol")
         if (strategyJob != null) {
             stopStrategy()
         }

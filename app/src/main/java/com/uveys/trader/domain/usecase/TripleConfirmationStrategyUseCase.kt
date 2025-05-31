@@ -62,18 +62,25 @@ class TripleConfirmationStrategyUseCase @Inject constructor(
      * @return Sinyal akışı
      */
     fun analyzeStrategyStream(symbol: String): Flow<TradingSignal> {
+        Timber.d("Strategy stream analysis started for $symbol")
         return binanceRepository.getKlinesStream(symbol, DEFAULT_INTERVAL)
             .map { latestCandle ->
+                Timber.d("Received new candle update from stream: openTime=${latestCandle.openTime}, closeTime=${latestCandle.closeTime}")
                 val historicalCandles = binanceRepository.getKlines(symbol, DEFAULT_INTERVAL, DEFAULT_CANDLE_LIMIT)
-                
-                val allCandles = if (historicalCandles.isNotEmpty() && historicalCandles.last().openTime == latestCandle.openTime) {
-                    Timber.d("Latest candle from stream has the same openTime as the last historical candle. Replacing last historical with latest.")
-                    historicalCandles.dropLast(1) + latestCandle
-                } else if (historicalCandles.isNotEmpty() && historicalCandles.last().openTime > latestCandle.openTime) {
-                    Timber.w("Latest candle from stream (openTime: ${latestCandle.openTime}) is older than the last historical candle (openTime: ${historicalCandles.last().openTime}). Using historical candles only.")
-                    historicalCandles
+
+                val allCandles = if (historicalCandles.isEmpty()) {
+                    listOf(latestCandle)
                 } else {
-                    historicalCandles + latestCandle
+                    val lastHistoricalCandle = historicalCandles.last()
+                    when {
+                        latestCandle.openTime > lastHistoricalCandle.openTime -> historicalCandles + latestCandle
+                        latestCandle.openTime == lastHistoricalCandle.openTime -> {
+                            Timber.d("Latest candle from stream has the same openTime as the last historical candle. Replacing last historical with latest.")
+                            historicalCandles.dropLast(1) + latestCandle                        }
+                        else -> { // latestCandle.openTime < lastHistoricalCandle.openTime
+                            Timber.w("Latest candle from stream (openTime: ${latestCandle.openTime}) is older than the last historical candle (openTime: ${lastHistoricalCandle.openTime}). Discarding latest candle.")
+                            historicalCandles                        }
+                    }
                 }
                 
                 if (allCandles.isEmpty()) {

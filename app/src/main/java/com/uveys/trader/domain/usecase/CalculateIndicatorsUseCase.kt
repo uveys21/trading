@@ -12,6 +12,8 @@ import org.ta4j.core.num.DecimalNum
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
 import java.time.ZoneId
 import javax.inject.Inject
 
@@ -78,13 +80,24 @@ class CalculateIndicatorsUseCase @Inject constructor() {
     private fun createBarSeries(candles: List<Candle>): BarSeries {
         val series = BaseBarSeries()
 
-        for (candle in candles) {
+        val sortedAndUniqueCandles = candles.sortedBy { it.closeTime }.distinctBy { it.closeTime }
+
+        for (candle in sortedAndUniqueCandles) {
             val barEndTime = Instant.ofEpochMilli(candle.closeTime)
-                .atZone(ZoneId.systemDefault())
+                .atZone(ZoneOffset.UTC)
+
+
+
+            val lastBarEndTime: ZonedDateTime? = if (!series.isEmpty) {
+                series.getBar(series.endIndex).endTime
+            } else {
+                null
+            }
+            timber.log.Timber.d("Attempting to add bar with openTime: ${Instant.ofEpochMilli(candle.openTime).atZone(ZoneOffset.UTC)}, closeTime: $barEndTime. Last bar end time in series: $lastBarEndTime")
 
             series.addBar(
                 barEndTime,
-                DecimalNum.valueOf(candle.open),
+                DecimalNum.valueOf(candle.open), 
                 DecimalNum.valueOf(candle.high),
                 DecimalNum.valueOf(candle.low),
                 DecimalNum.valueOf(candle.close),
