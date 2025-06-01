@@ -35,8 +35,7 @@ interface BinanceApiService {
      */
     @GET("fapi/v2/account")
     suspend fun getAccount(
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): Map<String, Any>
     
     /**
@@ -44,8 +43,7 @@ interface BinanceApiService {
      */
     @GET("fapi/v2/positionRisk")
     suspend fun getPositions(
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): List<PositionDto>
     
     /**
@@ -58,8 +56,7 @@ interface BinanceApiService {
         @Query("type") type: String,
         @Query("positionSide") positionSide: String,
         @Query("quantity") quantity: String,
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): OrderDto
     
     /**
@@ -74,8 +71,7 @@ interface BinanceApiService {
         @Query("price") price: String,
         @Query("quantity") quantity: String,
         @Query("timeInForce") timeInForce: String,
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): OrderDto
     
     /**
@@ -89,8 +85,7 @@ interface BinanceApiService {
         @Query("positionSide") positionSide: String,
         @Query("stopPrice") stopPrice: String,
         @Query("quantity") quantity: String,
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): OrderDto
     
     /**
@@ -104,8 +99,7 @@ interface BinanceApiService {
         @Query("positionSide") positionSide: String,
         @Query("price") price: String,
         @Query("quantity") quantity: String,
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): OrderDto
     
     /**
@@ -115,8 +109,7 @@ interface BinanceApiService {
     suspend fun setLeverage(
         @Query("symbol") symbol: String,
         @Query("leverage") leverage: Int,
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): Map<String, Any>
     
     /**
@@ -126,7 +119,6 @@ interface BinanceApiService {
     suspend fun getOrderHistory(
         @Query("symbol") symbol: String,
         @Query("limit") limit: Int,
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): List<OrderDto>
 }

@@ -72,8 +72,7 @@ class BinanceRepositoryImpl @Inject constructor(
     override suspend fun getAccountBalance(): BigDecimal {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
-            val response = apiService.getAccount(timestamp, signature)
+            val response = apiService.getAccount(timestamp)
             
             // USDT bakiyesini bul
             val assets = response["assets"] as List<Map<String, Any>>
@@ -93,8 +92,7 @@ class BinanceRepositoryImpl @Inject constructor(
     override suspend fun getOpenPositions(): List<Position> {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
-            val response = apiService.getPositions(timestamp, signature)
+            val response = apiService.getPositions(timestamp)
             
             // Sadece açık pozisyonları filtrele (positionAmt != 0)
             return response
@@ -114,7 +112,6 @@ class BinanceRepositoryImpl @Inject constructor(
     ): Order {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
             
             val response = apiService.createMarketOrder(
                 symbol = symbol,
@@ -122,8 +119,7 @@ class BinanceRepositoryImpl @Inject constructor(
                 type = "MARKET",
                 positionSide = positionSide.name,
                 quantity = quantity.toPlainString(),
-                timestamp = timestamp,
-                signature = signature
+                timestamp = timestamp
             )
             
             return mapper.mapToOrder(response)
@@ -142,7 +138,6 @@ class BinanceRepositoryImpl @Inject constructor(
     ): Order {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
             
             val response = apiService.createLimitOrder(
                 symbol = symbol,
@@ -152,8 +147,7 @@ class BinanceRepositoryImpl @Inject constructor(
                 price = price.toPlainString(),
                 quantity = quantity.toPlainString(),
                 timeInForce = "GTC", // Good Till Cancel
-                timestamp = timestamp,
-                signature = signature
+                timestamp = timestamp
             )
             
             return mapper.mapToOrder(response)
@@ -172,7 +166,6 @@ class BinanceRepositoryImpl @Inject constructor(
     ): Order {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
             
             val response = apiService.createStopLossOrder(
                 symbol = symbol,
@@ -181,8 +174,7 @@ class BinanceRepositoryImpl @Inject constructor(
                 positionSide = positionSide.name,
                 stopPrice = stopPrice.toPlainString(),
                 quantity = quantity.toPlainString(),
-                timestamp = timestamp,
-                signature = signature
+                timestamp = timestamp
             )
             
             return mapper.mapToOrder(response)
@@ -201,7 +193,6 @@ class BinanceRepositoryImpl @Inject constructor(
     ): Order {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
             
             val response = apiService.createTakeProfitOrder(
                 symbol = symbol,
@@ -210,8 +201,7 @@ class BinanceRepositoryImpl @Inject constructor(
                 positionSide = positionSide.name,
                 price = price.toPlainString(),
                 quantity = quantity.toPlainString(),
-                timestamp = timestamp,
-                signature = signature
+                timestamp = timestamp
             )
             
             return mapper.mapToOrder(response)
@@ -224,13 +214,11 @@ class BinanceRepositoryImpl @Inject constructor(
     override suspend fun setLeverage(symbol: String, leverage: Int): Boolean {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
             
             val response = apiService.setLeverage(
                 symbol = symbol,
                 leverage = leverage,
-                timestamp = timestamp,
-                signature = signature
+                timestamp = timestamp
             )
             
             return response["leverage"] == leverage
@@ -243,13 +231,11 @@ class BinanceRepositoryImpl @Inject constructor(
     override suspend fun getOrderHistory(symbol: String, limit: Int): List<Order> {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
             
             val response = apiService.getOrderHistory(
                 symbol = symbol,
                 limit = limit,
-                timestamp = timestamp,
-                signature = signature
+                timestamp = timestamp
             )
             
             return response.map { mapper.mapToOrder(it) }
@@ -269,12 +255,4 @@ class BinanceRepositoryImpl @Inject constructor(
         }
     }
 
-    /**
-     * İmza oluşturur
-     */
-    private fun generateSignature(timestamp: Long): String {
-        // Bu kısım BinanceAuthInterceptor tarafından otomatik olarak yapılacak
-        // Burada sadece timestamp parametresi ekleniyor
-        return "timestamp=$timestamp"
-    }
 }
