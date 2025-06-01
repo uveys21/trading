@@ -72,14 +72,15 @@ class BinanceRepositoryImpl @Inject constructor(
     override suspend fun getAccountBalance(): BigDecimal {
         try {
             val timestamp = Date().time
-            val response = apiService.getAccount(timestamp)
+            // Signature generation is handled by interceptor, so no explicit signature needed here
+            val response = apiService.getAccount(timestamp) // Assuming signature removed from service call
             
-            // USDT bakiyesini bul
-            val assets = response["assets"] as List<Map<String, Any>>
-            val usdtAsset = assets.find { it["asset"] == "USDT" }
+            val assets = response["assets"] as? List<Map<String, Any>> // Safe cast to list
+            val usdtAsset = assets?.find { it["asset"] == "USDT" } // Safe call for find
             
             return if (usdtAsset != null) {
-                BigDecimal(usdtAsset["availableBalance"] as String)
+                val availableBalanceString = usdtAsset["availableBalance"] as? String // Safe cast to String
+                BigDecimal(availableBalanceString ?: "0") // Default to "0" if null
             } else {
                 BigDecimal.ZERO
             }

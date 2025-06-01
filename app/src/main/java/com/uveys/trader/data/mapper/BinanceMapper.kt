@@ -12,16 +12,16 @@ class BinanceMapper {
     fun mapToCandle(dto: CandleDto): Candle {
         return Candle(
             openTime = dto.openTime,
-            open = BigDecimal(dto.open),
-            high = BigDecimal(dto.high),
-            low = BigDecimal(dto.low),
-            close = BigDecimal(dto.close),
-            volume = BigDecimal(dto.volume),
+            open = BigDecimal(dto.open ?: "0"),
+            high = BigDecimal(dto.high ?: "0"),
+            low = BigDecimal(dto.low ?: "0"),
+            close = BigDecimal(dto.close ?: "0"),
+            volume = BigDecimal(dto.volume ?: "0"),
             closeTime = dto.closeTime,
-            quoteAssetVolume = BigDecimal(dto.quoteAssetVolume),
+            quoteAssetVolume = BigDecimal(dto.quoteAssetVolume ?: "0"),
             numberOfTrades = dto.numberOfTrades,
-            takerBuyBaseAssetVolume = BigDecimal(dto.takerBuyBaseAssetVolume),
-            takerBuyQuoteAssetVolume = BigDecimal(dto.takerBuyQuoteAssetVolume)
+            takerBuyBaseAssetVolume = BigDecimal(dto.takerBuyBaseAssetVolume ?: "0"),
+            takerBuyQuoteAssetVolume = BigDecimal(dto.takerBuyQuoteAssetVolume ?: "0")
         )
     }
 
@@ -33,13 +33,13 @@ class BinanceMapper {
                 "SHORT" -> PositionSide.SHORT
                 else -> PositionSide.LONG // Varsayılan değer
             },
-            entryPrice = BigDecimal(dto.entryPrice),
-            markPrice = BigDecimal(dto.markPrice),
+            entryPrice = BigDecimal(dto.entryPrice ?: "0"),
+            markPrice = BigDecimal(dto.markPrice ?: "0"),
             leverage = dto.leverage,
-            unrealizedProfit = BigDecimal(dto.unrealizedProfit),
+            unrealizedProfit = BigDecimal(dto.unrealizedProfit ?: "0"),
             marginType = dto.marginType,
-            isolatedMargin = BigDecimal(dto.isolatedMargin),
-            positionAmt = BigDecimal(dto.positionAmt),
+            isolatedMargin = BigDecimal(dto.isolatedMargin ?: "0"),
+            positionAmt = BigDecimal(dto.positionAmt ?: "0"),
             updateTime = dto.updateTime
         )
     }
@@ -58,10 +58,10 @@ class BinanceMapper {
                 else -> OrderStatus.NEW
             },
             clientOrderId = dto.clientOrderId,
-            price = BigDecimal(dto.price),
-            avgPrice = BigDecimal(dto.avgPrice),
-            origQty = BigDecimal(dto.origQty),
-            executedQty = BigDecimal(dto.executedQty),
+            price = BigDecimal(dto.price ?: "0"),
+            avgPrice = BigDecimal(dto.avgPrice ?: "0"),
+            origQty = BigDecimal(dto.origQty ?: "0"),
+            executedQty = BigDecimal(dto.executedQty ?: "0"),
             type = when (dto.type) {
                 "LIMIT" -> OrderType.LIMIT
                 "MARKET" -> OrderType.MARKET
@@ -76,7 +76,7 @@ class BinanceMapper {
                 "SELL" -> OrderSide.SELL
                 else -> OrderSide.BUY
             },
-            stopPrice = BigDecimal(dto.stopPrice),
+            stopPrice = BigDecimal(dto.stopPrice ?: "0"),
             time = dto.time,
             updateTime = dto.updateTime,
             positionSide = when (dto.positionSide) {
