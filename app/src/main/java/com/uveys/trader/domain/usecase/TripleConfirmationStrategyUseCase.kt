@@ -81,7 +81,30 @@ class TripleConfirmationStrategyUseCase @Inject constructor(
                     return@map TradingSignal.NEUTRAL
                 }
 
-                val indicators = calculateIndicatorsUseCase.execute(allCandles, symbol, DEFAULT_INTERVAL)
+                // Sort by closeTime to ensure chronological order
+                val sortedCandles = allCandles.sortedBy { it.closeTime }
+
+                // Filter out any candles that would violate Ta4j's strict increasing endTime requirement
+                val finalCandles = mutableListOf<Candle>()
+                if (sortedCandles.isNotEmpty()) {
+                    finalCandles.add(sortedCandles.first()) // Add the first candle
+                    for (i in 1 until sortedCandles.size) {
+                        // Only add subsequent candles if their closeTime is strictly greater
+                        if (sortedCandles[i].closeTime > finalCandles.last().closeTime) {
+                            finalCandles.add(sortedCandles[i])
+                        } else {
+                            // Log if we skip a candle due to same or earlier closeTime after sort
+                            Timber.w("Skipping candle with closeTime ${sortedCandles[i].closeTime} for symbol $symbol as it's not strictly greater than previous ${finalCandles.last().closeTime}")
+                        }
+                    }
+                }
+
+                if (finalCandles.isEmpty()) {
+                    Timber.w("No valid candle data remaining for $symbol on $DEFAULT_INTERVAL after final filtering.")
+                    return@map TradingSignal.NEUTRAL
+                }
+
+                val indicators = calculateIndicatorsUseCase.execute(finalCandles, symbol, DEFAULT_INTERVAL)
                 
                 when {
                     indicators.isLongSignal() -> TradingSignal.LONG
