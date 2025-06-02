@@ -4,7 +4,7 @@
             "outputFile": "com.uveys.trader.test.app-mergeDebugAndroidTestResources-32:/values-v18/values-v18.xml",
             "map": [
                 {
-                    "source": "/home/user/.gradle/caches/8.11.1/transforms/cb316aa3790e2046c1f8a080934769ff/transformed/jetified-core-1.5.0/res/values-v18/values.xml",
+                    "source": "C:\\Users\\uveys\\.gradle\\caches\\8.11.1\\transforms\\cb316aa3790e2046c1f8a080934769ff\\transformed\\jetified-core-1.5.0\\res\\values-v18\\values.xml",
                     "from": {
                         "startLines": "4,12",
                         "startColumns": "0,0",

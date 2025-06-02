@@ -1,21 +1,29 @@
 package com.uveys.trader.domain.usecase
 
-import com.uveys.trader.domain.entity.Candle
 import com.uveys.trader.domain.entity.Order
 import com.uveys.trader.domain.entity.OrderSide
 import com.uveys.trader.domain.entity.Position
 import com.uveys.trader.domain.entity.PositionSide
-import com.uveys.trader.domain.entity.TechnicalIndicator
 import com.uveys.trader.domain.repository.BinanceRepository
-import com.uveys.trader.domain.usecase.TripleConfirmationStrategyUseCase.Companion.DEFAULT_CANDLE_LIMIT
-import com.uveys.trader.domain.usecase.TripleConfirmationStrategyUseCase.Companion.DEFAULT_INTERVAL
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.math.BigDecimal
 import javax.inject.Inject
-import kotlinx.coroutines.delay
 import timber.log.Timber
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flatMapConcat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.onEach
+import android.util.Log
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.merge
 
 @Singleton
 class TripleConfirmationStrategyUseCase @Inject constructor(
@@ -28,8 +36,6 @@ class TripleConfirmationStrategyUseCase @Inject constructor(
         const val STOP_LOSS_PERCENTAGE = 2.0 // %2
         const val TAKE_PROFIT_PERCENTAGE = 4.0 // %4
         const val MAX_RISK_PERCENTAGE = 1.0 // %1
-        
-
     }
 
     /**
@@ -66,7 +72,9 @@ class TripleConfirmationStrategyUseCase @Inject constructor(
         return binanceRepository.getKlinesStream(symbol, DEFAULT_INTERVAL)
             .map { latestCandle ->
                 Timber.d("Received new candle update from stream: openTime=${latestCandle.openTime}, closeTime=${latestCandle.closeTime}")
-                val historicalCandles = binanceRepository.getKlines(symbol, DEFAULT_INTERVAL, DEFAULT_CANDLE_LIMIT)
+                val historicalCandles = withContext(Dispatchers.IO) {
+                    binanceRepository.getKlines(symbol, DEFAULT_INTERVAL, DEFAULT_CANDLE_LIMIT)
+                }
 
                 val allCandles = if (historicalCandles.isEmpty()) {
                     listOf(latestCandle)
@@ -75,25 +83,29 @@ class TripleConfirmationStrategyUseCase @Inject constructor(
                     when {
                         latestCandle.openTime > lastHistoricalCandle.openTime -> historicalCandles + latestCandle
                         latestCandle.openTime == lastHistoricalCandle.openTime -> {
-                            Timber.d("Latest candle from stream has the same openTime as the last historical candle. Replacing last historical with latest.")
-                            historicalCandles.dropLast(1) + latestCandle                        }
+                            Timber.d("$symbol: Latest candle from stream has the same openTime as the last historical candle. Replacing last historical with latest.")
+                            historicalCandles.dropLast(1) + latestCandle
+                        }
                         else -> { // latestCandle.openTime < lastHistoricalCandle.openTime
-                            Timber.w("Latest candle from stream (openTime: ${latestCandle.openTime}) is older than the last historical candle (openTime: ${lastHistoricalCandle.openTime}). Discarding latest candle.")
-                            historicalCandles                        }
+                            Timber.w("$symbol: Latest candle from stream (openTime: ${latestCandle.openTime}) is older than the last historical candle (openTime: ${lastHistoricalCandle.openTime}). Discarding latest candle.")
+                            historicalCandles
+                        }
                     }
                 }
                 
                 if (allCandles.isEmpty()) {
-                    Timber.w("No candle data available for $symbol on $DEFAULT_INTERVAL after processing stream update.")
-                    return@map TradingSignal.NEUTRAL
-                }
-
-                val indicators = calculateIndicatorsUseCase.execute(allCandles, symbol, DEFAULT_INTERVAL)
-                
-                when {
-                    indicators.isLongSignal() -> TradingSignal.LONG
-                    indicators.isShortSignal() -> TradingSignal.SHORT
-                    else -> TradingSignal.NEUTRAL
+                    Timber.w("$symbol: No candle data available for $DEFAULT_INTERVAL after processing stream update.")
+                    TradingSignal.NEUTRAL
+                } else {
+                    val indicators = withContext(Dispatchers.Default) {
+                        calculateIndicatorsUseCase.execute(allCandles, symbol, DEFAULT_INTERVAL)
+                    }
+                    
+                    when {
+                        indicators.isLongSignal() -> TradingSignal.LONG
+                        indicators.isShortSignal() -> TradingSignal.SHORT
+                        else -> TradingSignal.NEUTRAL
+                    }
                 }
             }
     }
@@ -118,6 +130,7 @@ class TripleConfirmationStrategyUseCase @Inject constructor(
      * @param leverage Kaldıraç oranı
      */
     suspend fun executeTradeSignal(symbol: String, signal: TradingSignal, leverage: Int): TradeResult {
+        Log.d("AutoTradeUseCase", "executeTradeSignal: Function entered for $symbol with signal $signal and leverage $leverage")
         if (signal == TradingSignal.NEUTRAL) {
             return TradeResult(success = false, message = "Nötr sinyal, işlem yapılmadı")
         }
@@ -166,10 +179,10 @@ class TripleConfirmationStrategyUseCase @Inject constructor(
                 exitOrderSide = OrderSide.BUY
                 
                 stopLossPrice = currentPrice.multiply(
-                    BigDecimal.ONE.add(BigDecimal(STOP_LOSS_PERCENTAGE / 100.0))
+                    BigDecimal.ONE.add(BigDecimal(MAX_RISK_PERCENTAGE / leverage)) // Risk yüzdesi / Kaldıraç ile stop-loss
                 )
                 takeProfitPrice = currentPrice.multiply(
-                    BigDecimal.ONE.subtract(BigDecimal(TAKE_PROFIT_PERCENTAGE / 100.0))
+                    BigDecimal.ONE.subtract(BigDecimal(TAKE_PROFIT_PERCENTAGE / leverage)) // Risk yüzdesi / Kaldıraç ile take-profit
                 )
             }
             
@@ -212,6 +225,123 @@ class TripleConfirmationStrategyUseCase @Inject constructor(
                 success = false,
                 message = "Pozisyon Açılmadı İşlem Hatası: ${e.message}"
             )
+        }
+    }
+
+    /**
+     * Tüm future işlem çiftlerini tarar, belirli pozisyon sinyalinde işlem açar.
+     * Her işlem çifti için ayrı bir akış oluşturur ve bu akışları birleştirir.
+     * @param targetPosition İşlem açılacak hedef pozisyon (LONG veya SHORT). Null ise tüm sinyallerde işlem açılır.
+     * @return İşlem sonuçlarını içeren bir akış.
+     */
+    fun startAutoTrading(targetPosition: PositionSide?): Flow<TradeResult> = channelFlow {
+        Timber.d("startAutoTrading started in UseCase")
+        Log.d("AutoTradeUseCase", "startAutoTrading: Function entered.")
+        val symbols = try {
+            withContext(Dispatchers.IO) {
+                binanceRepository.getTradingPairs()
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "İşlem çiftleri alınırken hata oluştu.")
+            Log.e("AutoTradeUseCase", "startAutoTrading: Error fetching trading pairs: ${e.message}")
+            // Hata durumunda boş bir liste döndürüp akışı sonlandırabiliriz veya hata fırlatabiliriz.
+            // Şimdilik boş liste döndürüp loglayalım.
+            emptyList<String>()
+        }
+
+        Timber.d("startAutoTrading: Fetched ${symbols.size} trading pairs in UseCase")
+        Log.d("AutoTradeUseCase", "startAutoTrading: Fetched ${symbols.size} trading pairs.")
+        if (symbols.isEmpty()) {
+            Log.w("AutoTradeUseCase", "startAutoTrading: No trading pairs found. Aborting.")
+        }
+
+        val tradeResultFlows = symbols.map { symbol ->
+            binanceRepository.getKlinesStream(symbol, DEFAULT_INTERVAL)
+                .catch { e: Throwable ->
+                    Timber.e(e, "$symbol klinesStream alınırken hata oluştu: ${e.message}")
+                    Log.e("AutoTradeUseCase", "$symbol: Error fetching klines stream: ${e.message}")
+                }
+                .map { latestCandle ->
+                    Log.d("AutoTradeUseCase", "$symbol: Received latestCandle from stream in UseCase. OpenTime: ${latestCandle.openTime}")
+                    Timber.d("$symbol: Received new candle update from stream: openTime=${latestCandle.openTime}")
+                    val historicalCandles = withContext(Dispatchers.IO) {
+                        binanceRepository.getKlines(symbol, DEFAULT_INTERVAL, DEFAULT_CANDLE_LIMIT)
+                    }
+                    Timber.d("$symbol: Fetched ${historicalCandles.size} historical candles")
+
+                    val allCandles = if (historicalCandles.isEmpty()) {
+                        listOf(latestCandle)
+                    } else {
+                        val lastHistoricalCandle = historicalCandles.last()
+                        when {
+                            latestCandle.openTime > lastHistoricalCandle.openTime -> historicalCandles + latestCandle
+                            latestCandle.openTime == lastHistoricalCandle.openTime -> {
+                                Timber.d("$symbol: Latest candle from stream has the same openTime as the last historical candle. Replacing last historical with latest.")
+                                historicalCandles.dropLast(1) + latestCandle
+                            }
+                            else -> { // latestCandle.openTime < lastHistoricalCandle.openTime
+                                Timber.w("$symbol: Latest candle from stream (openTime: ${latestCandle.openTime}) is older than the last historical candle (openTime: ${lastHistoricalCandle.openTime}). Discarding latest candle.")
+                                historicalCandles
+                            }
+                        }
+                    }
+                    Timber.d("$symbol: Processed candle list size: ${allCandles.size}")
+
+                    if (allCandles.isEmpty()) {
+                        Timber.w("$symbol: No candle data available for $DEFAULT_INTERVAL after processing stream update. Emitting null.")
+                        null // No signal for this candle update, return null
+                    } else {
+                        val indicators = withContext(Dispatchers.Default) { // Use withContext for CPU-bound work
+                            calculateIndicatorsUseCase.execute(allCandles, symbol, DEFAULT_INTERVAL)
+                        }
+                        Timber.d("$symbol: Indicators calculated.")
+
+                        when {
+                            indicators.isLongSignal() -> Pair(symbol, TradingSignal.LONG)
+                            indicators.isShortSignal() -> Pair(symbol, TradingSignal.SHORT)
+                            else -> null // Nötr sinyal
+                        }
+                    }
+                }
+                .filterNotNull() // Sadece sinyal olanları ve null olmayan Pair<Symbol, TradingSignal> olanları filtrele
+                .onEach { (symbol, signal) -> Log.d("AutoTradeUseCase", "$symbol: After filterNotNull. Signal: $signal") }
+                .onEach { (symbol, signal) -> Timber.d("$symbol: Signal detected: $signal") }
+                .filter { (symbol, signal) -> // Hedef pozisyona göre filtrele
+                    val filterPassed = when (targetPosition) {
+                        PositionSide.LONG -> signal == TradingSignal.LONG
+                        PositionSide.SHORT -> signal == TradingSignal.SHORT
+                        null -> true // Hedef pozisyon belirlenmemişse tüm sinyalleri işle
+                    }
+                    Timber.d("$symbol: Filtering signal $signal. Target: $targetPosition. Filter passed: $filterPassed")
+                    Log.d("AutoTradeUseCase", "$symbol: After filter. Signal: $signal, Filter passed: $filterPassed")
+                    filterPassed
+                }
+                .flatMapConcat { (symbol, signal) -> // İşlemi gerçekleştir ve TradeResult akışını yayınla
+                    Log.d("AutoTradeUseCase", "$symbol: Before flatMapConcat. Signal: $signal")
+                    Log.d("AutoTradeUseCase", "$symbol: Inside flatMapConcat, attempting to call executeTradeSignal.")
+                    flow {
+                        Timber.i("$symbol: Executing trade signal: $signal")
+                        // Kaldıraç belirleme mantığı buraya eklenecek (şimdilik sabit 10x)
+                        val leverage = 10
+                        val tradeResult = executeTradeSignal(symbol, signal, leverage)
+                        Timber.i("$symbol: Trade execution result: ${tradeResult.message}")
+                        emit(tradeResult) // executeTradeSignal sonucu TradeResult olarak yayınla
+                    }.catch { e: Throwable -> // executeTradeSignal içindeki hataları yakala
+                        Timber.e(e, "$symbol işlem açılırken hata oluştu: ${e.message}")
+                        emit(TradeResult(success = false, message = "$symbol işlem açılırken hata: ${e.message}"))
+                    }
+                }
+                .catch { e: Throwable -> // Her bir sembol akışındaki diğer hataları yakala
+                    Timber.e(e, "$symbol işlem çifti için strateji akışında beklenmeyen hata oluştu: ${e.message}")
+                    emit(TradeResult(success = false, message = "$symbol için beklenmeyen hata: ${e.message}"))
+                }
+                .onCompletion { cause -> Log.d("AutoTradeUseCase", "$symbol: Flow completed with cause: $cause") }
+                .onEach { tradeResult -> Log.d("AutoTradeUseCase", "$symbol: Emitted TradeResult: ${tradeResult.message}") }
+        }
+
+        // Merge all individual symbol flows into a single flow and collect them in this channelFlow
+        tradeResultFlows.merge().collect { tradeResult ->
+            send(tradeResult) // Send to the outer channelFlow
         }
     }
 }

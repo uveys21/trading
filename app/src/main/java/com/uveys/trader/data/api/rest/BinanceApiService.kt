@@ -121,4 +121,10 @@ interface BinanceApiService {
         @Query("limit") limit: Int,
         @Query("timestamp") timestamp: Long
     ): List<OrderDto>
+
+    /**
+     * Tüm işlem çiftlerini ve borsa bilgilerini getirir
+     */
+    @GET("fapi/v1/exchangeInfo")
+    suspend fun getExchangeInfo(): ExchangeInfoResponse
 }

@@ -1,5 +1,6 @@
 package com.uveys.trader.presentation.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.uveys.trader.domain.entity.Order
@@ -39,8 +40,9 @@ data class MainUiState(
     val connectionStatus: String = "Bağlantı kuruluyor...",
     val connectionLatency: Long = 0,
     val lastSignalTime: Long = 0,
-    val lastTradeDetails: String = "" // <--- EKLENDİ
-
+    val lastTradeDetails: String = "",
+    val isAutoTradingRunning: Boolean = false,
+    val autoTradePosition: PositionSide? = null
 )
 
 /**
@@ -57,6 +59,7 @@ class MainViewModel @Inject constructor(
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     private var strategyJob: Job? = null
+    private var autoTradingJob: Job? = null
 
     init {
         Timber.d("MainViewModel initialized")
@@ -182,6 +185,71 @@ class MainViewModel @Inject constructor(
         _uiState.update { it.copy(isStrategyRunning = false, currentSignal = TradingSignal.NEUTRAL) }
     }
 
+    /**
+     * Otomatik işlemeyi başlatır
+     * @param targetPosition İşlem açılacak hedef pozisyon (LONG veya SHORT). Null ise tüm sinyallerde işlem açılır.
+     */
+    fun startAutoTrading(targetPosition: PositionSide?) {
+        Timber.d("startAutoTrading function entry point")
+        Timber.d("startAutoTrading called with targetPosition: $targetPosition")
+        Log.d("AutoTradeDebug", "startAutoTrading called with targetPosition: $targetPosition")
+        if (autoTradingJob != null) {
+            stopAutoTrading()
+        }
+
+        _uiState.update { it.copy(isAutoTradingRunning = true, autoTradePosition = targetPosition) }
+        Timber.d("UI State updated: isAutoTradingRunning = ${_uiState.value.isAutoTradingRunning}, autoTradePosition = ${_uiState.value.autoTradePosition}")
+        Log.d("AutoTradeDebug", "UI State updated: isAutoTradingRunning = ${_uiState.value.isAutoTradingRunning}, autoTradePosition = ${_uiState.value.autoTradePosition}")
+
+        autoTradingJob = viewModelScope.launch {
+            try {
+                strategyUseCase.startAutoTrading(targetPosition)
+                    .collect { tradeResult ->
+                        Log.d("AutoTradeDebug", "Received auto trade result: ${tradeResult.message}")
+                        _uiState.update {
+                            it.copy(
+                                lastTradeResult = tradeResult.message,
+                                // You might want to update other UI state based on tradeResult
+                            )
+                        }
+                    }
+            } catch (e: Exception) {
+                Timber.e(e, "Otomatik işlem başlatılırken hata oluştu")
+                Log.e("AutoTradeDebug", "Error starting auto trading: ${e.message}")
+                _uiState.update {
+                    it.copy(
+                        errorMessage = "Otomatik işlem başlatılırken hata oluştu: ${e.message}",
+                        isAutoTradingRunning = false
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Otomatik işlemeyi durdurur
+     */
+    fun stopAutoTrading() {
+        Timber.d("stopAutoTrading function entry point")
+        Log.d("AutoTradeDebug", "stopAutoTrading called")
+        autoTradingJob?.cancel()
+        autoTradingJob = null
+        _uiState.update { it.copy(isAutoTradingRunning = false, autoTradePosition = null) }
+        Timber.d("UI State updated: isAutoTradingRunning = ${_uiState.value.isAutoTradingRunning}, autoTradePosition = ${_uiState.value.autoTradePosition}")
+        Log.d("AutoTradeDebug", "UI State updated: isAutoTradingRunning = ${_uiState.value.isAutoTradingRunning}, autoTradePosition = ${_uiState.value.autoTradePosition}")
+    }
+
+    /**
+     * Otomatik işlem hedef pozisyonunu ayarlar
+     */
+    fun setAutoTradePosition(position: PositionSide?) {
+        Timber.d("setAutoTradePosition called with position: $position")
+        Log.d("AutoTradeDebug", "setAutoTradePosition called with position: $position")
+        _uiState.update { it.copy(autoTradePosition = position) }
+        Timber.d("UI State updated: autoTradePosition = ${_uiState.value.autoTradePosition}")
+        Log.d("AutoTradeDebug", "UI State updated: autoTradePosition = ${_uiState.value.autoTradePosition}")
+    }
+
     private fun scheduleMessageClear() {
         viewModelScope.launch {
             delay(5000) // 5 saniye sonra
@@ -290,6 +358,8 @@ class MainViewModel @Inject constructor(
                 }
 
                 Timber.e(e, "İşlem gerçekleştirilirken hata: $errorMessage")
+                Log.e("TradingError", "İşlem gerçekleştirilirken hata: $errorMessage")
+
                 _uiState.update {
                     it.copy(
                         lastTradeDetails = errorMessage,
@@ -349,6 +419,7 @@ class MainViewModel @Inject constructor(
      */
     fun logout() {
         stopStrategy()
+        stopAutoTrading()
         securePreferencesManager.clearApiCredentials()
     }
 }

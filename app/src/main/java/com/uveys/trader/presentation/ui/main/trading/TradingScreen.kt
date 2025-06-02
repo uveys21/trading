@@ -1,5 +1,6 @@
 package com.uveys.trader.presentation.ui.main.trading
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,13 @@ import com.uveys.trader.domain.entity.PositionSide
 import com.uveys.trader.presentation.viewmodel.MainUiState
 import com.uveys.trader.domain.usecase.TradingSignal
 import java.math.BigDecimal
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.RadioButton
+import com.uveys.trader.presentation.viewmodel.MainViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 
 /**
  * İşlem ekranı - Manuel alım/satım emirleri oluşturma
@@ -29,9 +37,11 @@ import java.math.BigDecimal
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TradingScreen(
-    uiState: MainUiState,
-    onPlaceOrder: (String, OrderSide, PositionSide, BigDecimal?, BigDecimal) -> Unit
+    onPlaceOrder: (String, OrderSide, PositionSide, BigDecimal?, BigDecimal) -> Unit,
+    viewModel: MainViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+
     var selectedSymbol by remember { mutableStateOf(uiState.selectedSymbol) }
     var showSymbolDialog by remember { mutableStateOf(false) }
 
@@ -145,6 +155,131 @@ fun TradingScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+                }
+            }
+        }
+
+        // Otomatik İşlem Kartı
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Otomatik İşlem",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Otomatik İşlem Durumu
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Durum: ${if (uiState.isAutoTradingRunning) "Çalışıyor" else "Durduruldu"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (uiState.isAutoTradingRunning) Color.Green else Color.Red
+                    )
+
+                    // Başlat/Durdur Butonu
+                    Button(
+                        onClick = {
+                            if (uiState.isAutoTradingRunning) {
+                                viewModel.stopAutoTrading()
+                            } else {
+                                viewModel.startAutoTrading(uiState.autoTradePosition)
+                            }
+                        }
+                    ) {
+                        Icon(imageVector = if (uiState.isAutoTradingRunning) Icons.Default.Stop else Icons.Default.PlayArrow, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(if (uiState.isAutoTradingRunning) "Durdur" else "Başlat")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Pozisyon Seçimi (Radyo Butonları)
+                Text(
+                    text = "Hedef Pozisyon",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // LONG Pozisyonu
+                    Row(
+                        modifier = Modifier
+                            .selectable(
+                                selected = uiState.autoTradePosition == PositionSide.LONG,
+                                onClick = {
+                                    Log.d("AutoTradeUI", "LONG radio button clicked.")
+                                    viewModel.setAutoTradePosition(PositionSide.LONG)
+                                }
+                            )
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = uiState.autoTradePosition == PositionSide.LONG,
+                            onClick = {
+                                Log.d("AutoTradeUI", "LONG radio button (inner) clicked.")
+                                viewModel.setAutoTradePosition(PositionSide.LONG)
+                            }
+                        )
+                        Text("LONG")
+                    }
+
+                    // SHORT Pozisyonu
+                    Row(
+                        modifier = Modifier
+                            .selectable(
+                                selected = uiState.autoTradePosition == PositionSide.SHORT,
+                                onClick = {
+                                    Log.d("AutoTradeUI", "SHORT radio button clicked.")
+                                    viewModel.setAutoTradePosition(PositionSide.SHORT)
+                                }
+                            )
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = uiState.autoTradePosition == PositionSide.SHORT,
+                            onClick = {
+                                Log.d("AutoTradeUI", "SHORT radio button (inner) clicked.")
+                                viewModel.setAutoTradePosition(PositionSide.SHORT)
+                            }
+                        )
+                        Text("SHORT")
+                    }
+
+                    // Hepsi (LONG ve SHORT)
+                    Row(
+                        modifier = Modifier
+                            .selectable(
+                                selected = uiState.autoTradePosition == null,
+                                onClick = { viewModel.setAutoTradePosition(null) }
+                            )
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = uiState.autoTradePosition == null,
+                            onClick = { viewModel.setAutoTradePosition(null) }
+                        )
+                        Text("Hepsi")
                     }
                 }
             }

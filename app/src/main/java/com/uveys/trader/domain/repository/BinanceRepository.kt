@@ -139,4 +139,10 @@ interface BinanceRepository {
      * @return true: Bağlantı aktif, false: Bağlantı yok
      */
     suspend fun ping(): Boolean
+    
+    /**
+     * Tüm ticari çiftleri getirir
+     * @return Ticari çiftler listesi
+     */
+    suspend fun getTradingPairs(): List<String>
 }

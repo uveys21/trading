@@ -14,6 +14,7 @@ import java.math.BigDecimal
 import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.util.Log
 
 /**
  * BinanceRepository arayüzünün uygulaması
@@ -51,6 +52,7 @@ class BinanceRepositoryImpl @Inject constructor(
     }
 
     override fun getKlinesStream(symbol: String, interval: String): Flow<Candle> {
+        Log.d("BinanceRepository", "getKlinesStream called for symbol: $symbol, interval: $interval")
         return webSocketManager.subscribeToKlines(symbol, interval)
             .map { mapper.mapToCandle(it) }
     }
@@ -125,7 +127,11 @@ class BinanceRepositoryImpl @Inject constructor(
 
             return mapper.mapToOrder(response)
         } catch (e: Exception) {
-            Timber.e(e, "Market emri oluşturulurken hata oluştu: $symbol, $side, $positionSide, $quantity")
+            Timber.e(e, "Market emri oluşturulurken hata oluştu: $symbol, $side, $positionSide, $quantity. Hata: ${e.message}")
+            if (e is retrofit2.HttpException) {
+                val errorBody = e.response()?.errorBody()?.string()
+                Log.e("BinanceApiError", "Market Order HTTP Hatası (${e.code()}): $errorBody")
+            }
             throw e
         }
     }
@@ -153,7 +159,11 @@ class BinanceRepositoryImpl @Inject constructor(
 
             return mapper.mapToOrder(response)
         } catch (e: Exception) {
-            Timber.e(e, "Limit emri oluşturulurken hata oluştu: $symbol, $side, $positionSide, $price, $quantity")
+            Timber.e(e, "Limit emri oluşturulurken hata oluştu: $symbol, $side, $positionSide, $price, $quantity. Hata: ${e.message}")
+            if (e is retrofit2.HttpException) {
+                val errorBody = e.response()?.errorBody()?.string()
+                Log.e("BinanceApiError", "Limit Order HTTP Hatası (${e.code()}): $errorBody")
+            }
             throw e
         }
     }
@@ -253,6 +263,16 @@ class BinanceRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Timber.e(e, "Ping failed") // Log the exception
             false // If any exception occurs during the API call, consider ping failed
+        }
+    }
+
+    override suspend fun getTradingPairs(): List<String> {
+        return try {
+            val exchangeInfo = apiService.getExchangeInfo()
+            exchangeInfo.symbols.map { it.symbol }
+        } catch (e: Exception) {
+            Timber.e(e, "İşlem çiftleri alınırken hata oluştu")
+            throw e
         }
     }
 

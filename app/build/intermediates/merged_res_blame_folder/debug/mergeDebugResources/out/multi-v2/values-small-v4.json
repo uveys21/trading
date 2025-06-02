@@ -4,7 +4,7 @@
             "outputFile": "com.uveys.trader.app-mergeDebugResources-74:/values-small-v4/values-small-v4.xml",
             "map": [
                 {
-                    "source": "/home/user/.gradle/caches/8.11.1/transforms/2ee88c97ed0c63b76074a035c364b579/transformed/material-1.11.0/res/values-small-v4/values-small-v4.xml",
+                    "source": "C:\\Users\\uveys\\.gradle\\caches\\8.11.1\\transforms\\2ee88c97ed0c63b76074a035c364b579\\transformed\\material-1.11.0\\res\\values-small-v4\\values-small-v4.xml",
                     "from": {
                         "startLines": "2,3,4,5",
                         "startColumns": "4,4,4,4",

@@ -86,7 +86,6 @@ fun MainScreen(
             }
             composable(Screen.Trading.route) {
                 TradingScreen(
-                    uiState = uiState,
                     onPlaceOrder = { symbol, side, positionSide, price, quantity ->
                         viewModel.placeOrder(
                             symbol = symbol,
