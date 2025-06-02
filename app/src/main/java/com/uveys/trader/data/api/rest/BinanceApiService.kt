@@ -7,7 +7,7 @@ import retrofit2.http.*
  * Binance Futures REST API servisi
  */
 interface BinanceApiService {
-    
+
     /**
      * Mum verilerini getirir
      * @param symbol Kripto para çifti
@@ -20,7 +20,7 @@ interface BinanceApiService {
         @Query("interval") interval: String,
         @Query("limit") limit: Int
     ): List<List<Any>>
-    
+
     /**
      * Anlık fiyat bilgisini getirir
      * @param symbol Kripto para çifti
@@ -29,25 +29,23 @@ interface BinanceApiService {
     suspend fun getPrice(
         @Query("symbol") symbol: String
     ): PriceDto
-    
+
     /**
      * Hesap bilgilerini getirir
      */
     @GET("fapi/v2/account")
     suspend fun getAccount(
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): Map<String, Any>
-    
+
     /**
      * Pozisyon bilgilerini getirir
      */
     @GET("fapi/v2/positionRisk")
     suspend fun getPositions(
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): List<PositionDto>
-    
+
     /**
      * Market emri oluşturur
      */
@@ -58,10 +56,9 @@ interface BinanceApiService {
         @Query("type") type: String,
         @Query("positionSide") positionSide: String,
         @Query("quantity") quantity: String,
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): OrderDto
-    
+
     /**
      * Limit emri oluşturur
      */
@@ -74,10 +71,9 @@ interface BinanceApiService {
         @Query("price") price: String,
         @Query("quantity") quantity: String,
         @Query("timeInForce") timeInForce: String,
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): OrderDto
-    
+
     /**
      * Stop-loss emri oluşturur
      */
@@ -89,10 +85,9 @@ interface BinanceApiService {
         @Query("positionSide") positionSide: String,
         @Query("stopPrice") stopPrice: String,
         @Query("quantity") quantity: String,
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): OrderDto
-    
+
     /**
      * Take-profit emri oluşturur
      */
@@ -104,10 +99,9 @@ interface BinanceApiService {
         @Query("positionSide") positionSide: String,
         @Query("price") price: String,
         @Query("quantity") quantity: String,
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): OrderDto
-    
+
     /**
      * Kaldıraç oranını ayarlar
      */
@@ -115,10 +109,9 @@ interface BinanceApiService {
     suspend fun setLeverage(
         @Query("symbol") symbol: String,
         @Query("leverage") leverage: Int,
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): Map<String, Any>
-    
+
     /**
      * Emir geçmişini getirir
      */
@@ -126,7 +119,6 @@ interface BinanceApiService {
     suspend fun getOrderHistory(
         @Query("symbol") symbol: String,
         @Query("limit") limit: Int,
-        @Query("timestamp") timestamp: Long,
-        @Query("signature") signature: String
+        @Query("timestamp") timestamp: Long
     ): List<OrderDto>
 }

@@ -107,7 +107,7 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     val signalColor = when (uiState.currentSignal) {
-                        TradingSignal.LONG -> Color.Green
+                        TradingSignal.LONG -> Color(0xFF2E7D32) // daha koyu yeşil
                         TradingSignal.SHORT -> Color.Red
                         TradingSignal.NEUTRAL -> Color.Gray
                     }
@@ -137,7 +137,7 @@ fun HomeScreen(
                             Text(
                                 text = "Bağlantı durumu: ${uiState.connectionStatus}",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = if (uiState.connectionStatus == "Aktif") Color.Green else Color.Red
+                                color = if (uiState.connectionStatus == "Aktif") Color.Blue else Color.Red
                             )
 
                             if (uiState.connectionLatency > 0) {
@@ -265,7 +265,7 @@ fun HomeScreen(
                         items(uiState.positions) { position ->
                             // Position'dan profit bilgisini hesapla (varsayılan değerler)
                             val unrealizedProfit = position.unrealizedProfit.toDouble()
-                            val profitColor = if (unrealizedProfit >= 0) Color.Green else Color.Red
+                            val profitColor = if (unrealizedProfit >= 0) Color.Blue else Color.Red
                             val profitPercentage = position.profitPercentage.toDouble()
 
                             Row(

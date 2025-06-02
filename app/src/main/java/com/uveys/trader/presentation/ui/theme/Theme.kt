@@ -7,35 +7,41 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
+
+// Tüm temalarda dengeli ve okunabilir yeşil tonu
+private val PrimaryGreen = Color(0xFF81C784) // Muted yeşil
+
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF4CAF50),
-    secondary = Color(0xFF03DAC6),
-    tertiary = Color(0xFF3700B3),
+    primary = PrimaryGreen,
+    secondary = Color(0xFF80DEEA),
+    tertiary = Color(0xFF9575CD),
     background = Color(0xFF121212),
     surface = Color(0xFF1E1E1E),
-    error = Color(0xFFCF6679),
-    onPrimary = Color.White,
+    error = Color(0xFFEF5350),
+    onPrimary = Color.Black,
     onSecondary = Color.Black,
     onTertiary = Color.White,
     onBackground = Color.White,
     onSurface = Color.White,
-    onError = Color.Black
+    onError = Color.White
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF4CAF50),
-    secondary = Color(0xFF03DAC6),
-    tertiary = Color(0xFF3700B3),
-    background = Color.White,
-    surface = Color(0xFFF5F5F5),
-    error = Color(0xFFB00020),
-    onPrimary = Color.White,
+    primary = PrimaryGreen,
+    secondary = Color(0xFF4DD0E1),
+    tertiary = Color(0xFF7E57C2),
+    background = Color(0xFFF9F9F9),
+    surface = Color(0xFFFFFFFF),
+    error = Color(0xFFD32F2F),
+    onPrimary = Color.Black,
     onSecondary = Color.Black,
     onTertiary = Color.White,
     onBackground = Color.Black,
     onSurface = Color.Black,
     onError = Color.White
 )
+
+
 
 @Composable
 fun UveysTraderTheme(

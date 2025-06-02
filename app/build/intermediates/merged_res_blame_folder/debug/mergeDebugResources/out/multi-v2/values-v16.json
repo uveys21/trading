@@ -1,0 +1,38 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.uveys.trader.app-mergeDebugResources-74:/values-v16/values-v16.xml",
+            "map": [
+                {
+                    "source": "/home/user/.gradle/caches/8.11.1/transforms/eab2ffef216097d24a60674a8df8f8be/transformed/core-1.12.0/res/values-v16/values-v16.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "65",
+                        "endOffsets": "116"
+                    }
+                },
+                {
+                    "source": "/home/user/.gradle/caches/8.11.1/transforms/f5bb73cb237269521980efc64a482487/transformed/appcompat-1.6.1/res/values-v16/values-v16.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "5",
+                        "endColumns": "12",
+                        "endOffsets": "223"
+                    },
+                    "to": {
+                        "startLines": "3",
+                        "startColumns": "4",
+                        "startOffsets": "121",
+                        "endLines": "6",
+                        "endColumns": "12",
+                        "endOffsets": "289"
+                    }
+                }
+            ]
+        }
+    ]
+}

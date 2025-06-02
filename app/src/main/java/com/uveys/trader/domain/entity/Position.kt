@@ -23,7 +23,7 @@ data class Position(
 
     val profitPercentage: BigDecimal
         get() {
-            if (entryPrice == BigDecimal.ZERO) return BigDecimal.ZERO
+            if (entryPrice.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO
 
             val difference = when (positionSide) {
                 PositionSide.LONG -> markPrice - entryPrice
@@ -38,6 +38,13 @@ data class Position(
 }
 
 enum class PositionSide {
-    LONG, SHORT
+    LONG,
+    SHORT;
+
+    val displayName: String
+        get() = when (this) {
+            LONG -> "Long"
+            SHORT -> "Short"
+        }
 }
 

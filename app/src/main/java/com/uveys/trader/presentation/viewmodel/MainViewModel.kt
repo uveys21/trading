@@ -38,7 +38,9 @@ data class MainUiState(
     val riskPercentage: Double = 1.0,
     val connectionStatus: String = "Bağlantı kuruluyor...",
     val connectionLatency: Long = 0,
-    val lastSignalTime: Long = 0
+    val lastSignalTime: Long = 0,
+    val lastTradeDetails: String = "" // <--- EKLENDİ
+
 )
 
 /**
@@ -180,6 +182,13 @@ class MainViewModel @Inject constructor(
         _uiState.update { it.copy(isStrategyRunning = false, currentSignal = TradingSignal.NEUTRAL) }
     }
 
+    private fun scheduleMessageClear() {
+        viewModelScope.launch {
+            delay(5000) // 5 saniye sonra
+            _uiState.update { it.copy(lastTradeDetails = "") }
+        }
+    }
+
     /**
      * Manuel emir verir
      */
@@ -193,34 +202,102 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true) }
-
-                val order = if (price == null) {
-                    // Market emri
-                    binanceRepository.createMarketOrder(symbol, side, positionSide, quantity)
-                } else {
-                    // Limit emri
-                    binanceRepository.createLimitOrder(symbol, side, positionSide, price, quantity)
-                }
-
+                val result = manualTradingUseCase.placeOrder(symbol, side, positionSide, price, quantity)
                 _uiState.update {
                     it.copy(
-                        lastTradeResult = "Emir başarıyla oluşturuldu: ${order.orderId}",
+                        lastTradeDetails = "İşlem başarıyla gerçekleştirildi: ${result.orderId}",
                         isLoading = false
                     )
                 }
-
-                // Emir sonrası verileri güncelle
                 loadInitialData()
-
             } catch (e: Exception) {
-                Timber.e(e, "Emir oluşturulurken hata oluştu")
+                val errorMessage = when {
+                    e.message?.contains("400") == true -> {
+                        when {
+                            e.message?.contains("LOT_SIZE") == true ->
+                                "Hata: İşlem miktarı geçersiz. Detay: Minimum/maksimum miktar sınırlarına uygun değil"
+                            e.message?.contains("PRICE_FILTER") == true ->
+                                "Hata: Fiyat değeri geçersiz. Detay: Fiyat, izin verilen aralıkta değil"
+                            e.message?.contains("insufficient balance") == true ->
+                                "Hata: Yetersiz bakiye. Detay: İşlem için yeterli USDT bakiyeniz bulunmuyor"
+                            e.message?.contains("PERCENT_PRICE") == true ->
+                                "Hata: Fiyat aralık dışında. Detay: Belirlenen fiyat mevcut piyasa fiyatından çok uzak"
+                            e.message?.contains("MIN_NOTIONAL") == true ->
+                                "Hata: İşlem tutarı çok düşük. Detay: Minimum işlem tutarının altında"
+                            e.message?.contains("MAX_NUM_ORDERS") == true ->
+                                "Hata: Maksimum emir limiti. Detay: Açık emir sayınız limite ulaştı"
+                            e.message?.contains("POSITION_SIDE") == true ->
+                                "Hata: Pozisyon yönü hatası. Detay: Seçilen pozisyon yönü geçersiz"
+                            e.message?.contains("REDUCE_ONLY") == true ->
+                                "Hata: Pozisyon kapatma hatası. Detay: Kapatılacak pozisyon bulunamadı"
+                            e.message?.contains("HTTP: 400") == true -> {
+                                "Hata: İşlem talebi geçersiz. Lütfen parametrelerinizi kontrol ediniz. " +
+                                (e.message?.let { message ->
+                                    when {
+                                        message.contains("body=") -> {
+                                            "Detay: " + message.substringAfter("body=")
+                                                .substringBefore("}")
+                                                .replace("\"", "")
+                                                .replace("{", "")
+                                                .trim()
+                                        }
+                                        message.contains("msg=") -> {
+                                            "Detay: " + message.substringAfter("msg=")
+                                                .substringBefore(",")
+                                                .replace("\"", "")
+                                                .trim()
+                                        }
+                                        else -> "Detay: İşlem parametreleri geçersiz"
+                                    }
+                                } ?: "Detay: İşlem parametreleri geçersiz")
+                            }
+                            else -> {
+                                // HTTP 400 hata mesajını detaylı olarak çıkart
+                                val errorBody = e.message?.let { message ->
+                                    when {
+                                        message.contains("body=") -> {
+                                            message.substringAfter("body=")
+                                                .substringBefore("}")
+                                                .replace("\"", "")
+                                                .replace("{", "")
+                                                .trim()
+                                        }
+                                        message.contains("msg=") -> {
+                                            message.substringAfter("msg=")
+                                                .substringBefore(",")
+                                                .replace("\"", "")
+                                                .trim()
+                                        }
+                                        else -> message
+                                    }
+                                } ?: "Detaylı hata bilgisi alınamadı"
+
+                                val errorCode = e.message?.let { message ->
+                                    message.substringAfter("code=")
+                                        .substringBefore(",")
+                                        .trim()
+                                } ?: "400"
+
+                                "Hata: İşlem başarısız (HTTP $errorCode)\nDetay: $errorBody"
+                            }
+                        }
+                    }
+                    e.message?.contains("timeout") == true ->
+                        "Hata: Sunucu yanıt vermiyor. Detay: İşlem zaman aşımına uğradı, internet bağlantınızı kontrol edin"
+                    e.message?.contains("5") == true ->
+                        "Hata: Sunucu hatası. Detay: Binance'de geçici bir sorun oluştu, lütfen daha sonra tekrar deneyin"
+                    else -> "Hata: ${e.message ?: "Bilinmeyen bir hata oluştu"}"
+                }
+
+                Timber.e(e, "İşlem gerçekleştirilirken hata: $errorMessage")
                 _uiState.update {
                     it.copy(
-                        errorMessage = "Emir oluşturulamadı: ${e.message}",
+                        lastTradeDetails = errorMessage,
                         isLoading = false
                     )
                 }
             }
+            scheduleMessageClear()
         }
     }
 
@@ -275,3 +352,4 @@ class MainViewModel @Inject constructor(
         securePreferencesManager.clearApiCredentials()
     }
 }
+

@@ -1,64 +1,19 @@
-gitignore
-# Created by .ignore support plugin (hsz.mobi)
-### Android template
-# Built application files
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/app/build/
 *.apk
 *.aab
-*.ap_
+/app/release
+/app/debug
+.navigation
+output.json
+/app/src/main/assets/apikey.properties
 
-# Files for the ART/Dalvik VM
-*.dex
-
-# Java class files
-*.class
-
-# Generated files
-bin/
-gen/
-out/
-
-# Gradle files
-.gradle/
-build/
-
-# Local configuration files (sdk path, etc)
-local.properties
-
-# Log files
-*.log
-
-echo "java_pid*.hprof" >> .gitignore
-echo "*.hprof" >> .gitignore
-
-
-# Android Studio Navigation editor files
-.navigation/
-
-# Android Studio captures folder
-captures/
-
-# IntelliJ
-*.iml
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/gradle.xml
-.idea/assetWizardSettings.xml
-.idea/dictionaries/
-.idea/libraries/
-.idea/misc.xml
-.idea/modules.xml
-.idea/runConfigurations/
-.idea/vcs.xml
-
-# Keystore files
-*.jks
-*.keystore
-
-# External native build folder created in Android Studio 2.2 and later
-.cxx/
-
-# Google Services (e.g. Google Maps)
-google-services.json # Genellikle reponuzda olmamalı, CI/CD veya manuel olarak eklenmeli
-
-# Secrets
-secrets.properties # API anahtarları gibi gizli bilgileri içerebilir

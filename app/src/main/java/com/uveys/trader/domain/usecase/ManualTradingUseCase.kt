@@ -97,4 +97,27 @@ class ManualTradingUseCase @Inject constructor(
     suspend fun setLeverage(symbol: String, leverage: Int): Boolean {
         return binanceRepository.setLeverage(symbol, leverage)
     }
+
+    /**
+     * Manuel emir oluşturur. Price null ise market emri, değilse limit emir oluşturur.
+     * @param symbol Kripto para çifti
+     * @param side Emir yönü (BUY/SELL)
+     * @param positionSide Pozisyon yönü (LONG/SHORT)
+     * @param price Fiyat (null ise market emri)
+     * @param quantity Miktar
+     * @return Oluşturulan emir
+     */
+    suspend fun placeOrder(
+        symbol: String,
+        side: OrderSide,
+        positionSide: PositionSide,
+        price: BigDecimal?,
+        quantity: BigDecimal
+    ): Order {
+        return if (price == null) {
+            createMarketOrder(symbol, side, positionSide, quantity)
+        } else {
+            createLimitOrder(symbol, side, positionSide, price, quantity)
+        }
+    }
 }

@@ -2,13 +2,18 @@ package com.uveys.trader.presentation.ui.main.trading
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -17,7 +22,6 @@ import com.uveys.trader.domain.entity.PositionSide
 import com.uveys.trader.presentation.viewmodel.MainUiState
 import com.uveys.trader.domain.usecase.TradingSignal
 import java.math.BigDecimal
-
 
 /**
  * İşlem ekranı - Manuel alım/satım emirleri oluşturma
@@ -30,14 +34,15 @@ fun TradingScreen(
 ) {
     var selectedSymbol by remember { mutableStateOf(uiState.selectedSymbol) }
     var showSymbolDialog by remember { mutableStateOf(false) }
-    
+
     var orderType by remember { mutableStateOf("MARKET") }
     var positionSide by remember { mutableStateOf(PositionSide.LONG) }
     var quantity by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
-    
+
     val scrollState = rememberScrollState()
-    
+    var inputErrorMessage by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -60,7 +65,7 @@ fun TradingScreen(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -68,7 +73,7 @@ fun TradingScreen(
                     Button(onClick = { showSymbolDialog = true }) {
                         Text("Parite Değiştir")
                     }
-                    
+
                     // Sinyal göstergesi
                     val signalColor = when (uiState.currentSignal) {
                         TradingSignal.LONG -> Color.Green
@@ -76,14 +81,14 @@ fun TradingScreen(
                         TradingSignal.NEUTRAL -> Color.Gray
                         else -> Color.Gray
                     }
-                    
+
                     val signalText = when (uiState.currentSignal) {
                         TradingSignal.LONG -> "LONG"
                         TradingSignal.SHORT -> "SHORT"
                         TradingSignal.NEUTRAL -> "NÖTR"
                         else -> "NÖTR"
                     }
-                    
+
                     Text(
                         text = "Sinyal: $signalText",
                         style = MaterialTheme.typography.titleMedium,
@@ -91,26 +96,19 @@ fun TradingScreen(
                         fontWeight = FontWeight.Bold
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Teknik gösterge değerleri
-                // Not: Gerçek uygulamada bu değerler MainViewModel'den alınacak
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text(
-                            text = "EMA (50)",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "EMA (200)",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Text("EMA (50)", style = MaterialTheme.typography.bodyMedium)
+                        Text("EMA (200)", style = MaterialTheme.typography.bodyMedium)
                     }
-                    
+
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
                             text = "28,450.25",
@@ -124,24 +122,18 @@ fun TradingScreen(
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text(
-                            text = "RSI (14)",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "MACD",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Text("RSI (14)", style = MaterialTheme.typography.bodyMedium)
+                        Text("MACD", style = MaterialTheme.typography.bodyMedium)
                     }
-                    
+
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
                             text = "58.25",
@@ -157,7 +149,7 @@ fun TradingScreen(
                 }
             }
         }
-        
+
         // Manuel işlem kartı
         Card(
             modifier = Modifier
@@ -172,16 +164,22 @@ fun TradingScreen(
                 Text(
                     text = "Manuel İşlem",
                     style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Text(
+                    text = "Kullanılabilir Bakiye: ${uiState.balance} USDT",
+                    style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                
+
                 // Emir tipi seçimi
                 Text(
                     text = "Emir Tipi",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -191,23 +189,23 @@ fun TradingScreen(
                         onClick = { orderType = "MARKET" },
                         label = { Text("Market") }
                     )
-                    
+
                     FilterChip(
                         selected = orderType == "LIMIT",
                         onClick = { orderType = "LIMIT" },
                         label = { Text("Limit") }
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Pozisyon yönü seçimi
                 Text(
                     text = "Pozisyon Yönü",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -217,16 +215,16 @@ fun TradingScreen(
                         onClick = { positionSide = PositionSide.LONG },
                         label = { Text("LONG") }
                     )
-                    
+
                     FilterChip(
                         selected = positionSide == PositionSide.SHORT,
                         onClick = { positionSide = PositionSide.SHORT },
                         label = { Text("SHORT") }
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Miktar girişi
                 OutlinedTextField(
                     value = quantity,
@@ -234,11 +232,12 @@ fun TradingScreen(
                     label = { Text("Miktar") },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true
+                    singleLine = true,
+                    isError = inputErrorMessage.isNotEmpty()
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Limit emri için fiyat girişi
                 if (orderType == "LIMIT") {
                     OutlinedTextField(
@@ -247,12 +246,13 @@ fun TradingScreen(
                         label = { Text("Fiyat") },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true
+                        singleLine = true,
+                        isError = inputErrorMessage.isNotEmpty()
                     )
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-                
+
                 // İşlem butonları
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -260,20 +260,26 @@ fun TradingScreen(
                 ) {
                     Button(
                         onClick = {
-                            if (quantity.isNotEmpty()) {
+                            // Input validation
+                            if (quantity.isEmpty()) {
+                                inputErrorMessage = "Lütfen miktar giriniz."
+                                return@Button
+                            }
+
+                            if (orderType == "LIMIT" && price.isEmpty()) {
+                                inputErrorMessage = "Limit işlemi için fiyat girilmelidir."
+                                return@Button
+                            }
+
+                            try {
                                 val side = if (positionSide == PositionSide.LONG) OrderSide.BUY else OrderSide.SELL
-                                val priceValue = if (orderType == "LIMIT" && price.isNotEmpty()) {
-                                    BigDecimal(price)
-                                } else {
-                                    null
-                                }
-                                onPlaceOrder(
-                                    selectedSymbol,
-                                    side,
-                                    positionSide,
-                                    priceValue,
-                                    BigDecimal(quantity)
-                                )
+                                val priceValue = if (orderType == "LIMIT") BigDecimal(price) else null
+                                val quantityValue = BigDecimal(quantity)
+
+                                onPlaceOrder(selectedSymbol, side, positionSide, priceValue, quantityValue)
+                                inputErrorMessage = ""
+                            } catch (e: Exception) {
+                                inputErrorMessage = "Giriş hatası: ${e.message}"
                             }
                         },
                         modifier = Modifier.weight(1f),
@@ -282,25 +288,81 @@ fun TradingScreen(
                         Text("İşlemi Gerçekleştir")
                     }
                 }
-                
-                // Son işlem sonucu
-                if (uiState.lastTradeResult.isNotEmpty()) {
+
+                // Giriş hatalarını göster
+                if (inputErrorMessage.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Icon(
+                            Icons.Filled.Error,
+                            contentDescription = "Hata",
+                            tint = Color.Red,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = inputErrorMessage,
+                            color = Color.Red,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                // İşlem sonuçlarını göster
+                if (uiState.lastTradeDetails.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Text(
-                        text = uiState.lastTradeResult,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+
+                    val (bgColor, textColor, icon) = when {
+                        uiState.lastTradeDetails.startsWith("Hata:") ->
+                            Triple(
+                                Color.Red.copy(alpha = 0.1f),
+                                Color.Red,
+                                Icons.Filled.Error
+                            )
+                        else ->
+                            Triple(
+                                Color.Green.copy(alpha = 0.1f),
+                                Color(0xFF388E3C),
+                                Icons.Filled.CheckCircle
+                            )
+                    }
+
+                    Surface(
+                        color = bgColor,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Icon(
+                                icon,
+                                contentDescription = null,
+                                tint = textColor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = uiState.lastTradeDetails,
+                                color = textColor,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
                 }
             }
         }
     }
-    
+
     // Sembol seçim dialogu
     if (showSymbolDialog) {
         val symbols = listOf("BTCUSDT", "ETHUSDT", "BNBUSDT", "ADAUSDT", "DOGEUSDT", "XRPUSDT")
-        
+
         AlertDialog(
             onDismissRequest = { showSymbolDialog = false },
             title = { Text("Parite Seç") },
@@ -327,5 +389,3 @@ fun TradingScreen(
         )
     }
 }
-
-

@@ -72,15 +72,15 @@ class BinanceRepositoryImpl @Inject constructor(
     override suspend fun getAccountBalance(): BigDecimal {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
-            val response = apiService.getAccount(timestamp, signature)
-            
-            // USDT bakiyesini bul
-            val assets = response["assets"] as List<Map<String, Any>>
-            val usdtAsset = assets.find { it["asset"] == "USDT" }
-            
+            // Signature generation is handled by interceptor, so no explicit signature needed here
+            val response = apiService.getAccount(timestamp) // Assuming signature removed from service call
+
+            val assets = response["assets"] as? List<Map<String, Any>> // Safe cast to list
+            val usdtAsset = assets?.find { it["asset"] == "USDT" } // Safe call for find
+
             return if (usdtAsset != null) {
-                BigDecimal(usdtAsset["availableBalance"] as String)
+                val availableBalanceString = usdtAsset["availableBalance"] as? String // Safe cast to String
+                BigDecimal(availableBalanceString ?: "0") // Default to "0" if null
             } else {
                 BigDecimal.ZERO
             }
@@ -93,9 +93,8 @@ class BinanceRepositoryImpl @Inject constructor(
     override suspend fun getOpenPositions(): List<Position> {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
-            val response = apiService.getPositions(timestamp, signature)
-            
+            val response = apiService.getPositions(timestamp)
+
             // Sadece açık pozisyonları filtrele (positionAmt != 0)
             return response
                 .filter { BigDecimal(it.positionAmt) != BigDecimal.ZERO }
@@ -114,18 +113,16 @@ class BinanceRepositoryImpl @Inject constructor(
     ): Order {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
-            
+
             val response = apiService.createMarketOrder(
                 symbol = symbol,
                 side = side.name,
                 type = "MARKET",
                 positionSide = positionSide.name,
                 quantity = quantity.toPlainString(),
-                timestamp = timestamp,
-                signature = signature
+                timestamp = timestamp
             )
-            
+
             return mapper.mapToOrder(response)
         } catch (e: Exception) {
             Timber.e(e, "Market emri oluşturulurken hata oluştu: $symbol, $side, $positionSide, $quantity")
@@ -142,8 +139,7 @@ class BinanceRepositoryImpl @Inject constructor(
     ): Order {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
-            
+
             val response = apiService.createLimitOrder(
                 symbol = symbol,
                 side = side.name,
@@ -152,10 +148,9 @@ class BinanceRepositoryImpl @Inject constructor(
                 price = price.toPlainString(),
                 quantity = quantity.toPlainString(),
                 timeInForce = "GTC", // Good Till Cancel
-                timestamp = timestamp,
-                signature = signature
+                timestamp = timestamp
             )
-            
+
             return mapper.mapToOrder(response)
         } catch (e: Exception) {
             Timber.e(e, "Limit emri oluşturulurken hata oluştu: $symbol, $side, $positionSide, $price, $quantity")
@@ -172,8 +167,7 @@ class BinanceRepositoryImpl @Inject constructor(
     ): Order {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
-            
+
             val response = apiService.createStopLossOrder(
                 symbol = symbol,
                 side = side.name,
@@ -181,10 +175,9 @@ class BinanceRepositoryImpl @Inject constructor(
                 positionSide = positionSide.name,
                 stopPrice = stopPrice.toPlainString(),
                 quantity = quantity.toPlainString(),
-                timestamp = timestamp,
-                signature = signature
+                timestamp = timestamp
             )
-            
+
             return mapper.mapToOrder(response)
         } catch (e: Exception) {
             Timber.e(e, "Stop-loss emri oluşturulurken hata oluştu: $symbol, $side, $positionSide, $stopPrice, $quantity")
@@ -201,8 +194,7 @@ class BinanceRepositoryImpl @Inject constructor(
     ): Order {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
-            
+
             val response = apiService.createTakeProfitOrder(
                 symbol = symbol,
                 side = side.name,
@@ -210,10 +202,9 @@ class BinanceRepositoryImpl @Inject constructor(
                 positionSide = positionSide.name,
                 price = price.toPlainString(),
                 quantity = quantity.toPlainString(),
-                timestamp = timestamp,
-                signature = signature
+                timestamp = timestamp
             )
-            
+
             return mapper.mapToOrder(response)
         } catch (e: Exception) {
             Timber.e(e, "Take-profit emri oluşturulurken hata oluştu: $symbol, $side, $positionSide, $price, $quantity")
@@ -224,15 +215,13 @@ class BinanceRepositoryImpl @Inject constructor(
     override suspend fun setLeverage(symbol: String, leverage: Int): Boolean {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
-            
+
             val response = apiService.setLeverage(
                 symbol = symbol,
                 leverage = leverage,
-                timestamp = timestamp,
-                signature = signature
+                timestamp = timestamp
             )
-            
+
             return response["leverage"] == leverage
         } catch (e: Exception) {
             Timber.e(e, "Kaldıraç ayarlanırken hata oluştu: $symbol, $leverage")
@@ -243,15 +232,13 @@ class BinanceRepositoryImpl @Inject constructor(
     override suspend fun getOrderHistory(symbol: String, limit: Int): List<Order> {
         try {
             val timestamp = Date().time
-            val signature = generateSignature(timestamp)
-            
+
             val response = apiService.getOrderHistory(
                 symbol = symbol,
                 limit = limit,
-                timestamp = timestamp,
-                signature = signature
+                timestamp = timestamp
             )
-            
+
             return response.map { mapper.mapToOrder(it) }
         } catch (e: Exception) {
             Timber.e(e, "Emir geçmişi alınırken hata oluştu: $symbol")
@@ -269,12 +256,4 @@ class BinanceRepositoryImpl @Inject constructor(
         }
     }
 
-    /**
-     * İmza oluşturur
-     */
-    private fun generateSignature(timestamp: Long): String {
-        // Bu kısım BinanceAuthInterceptor tarafından otomatik olarak yapılacak
-        // Burada sadece timestamp parametresi ekleniyor
-        return "timestamp=$timestamp"
-    }
 }

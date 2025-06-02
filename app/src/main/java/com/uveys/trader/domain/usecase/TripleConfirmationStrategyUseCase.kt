@@ -210,7 +210,7 @@ class TripleConfirmationStrategyUseCase @Inject constructor(
         } catch (e: Exception) {
             return TradeResult(
                 success = false,
-                message = "İşlem hatası: ${e.message}"
+                message = "Pozisyon Açılmadı İşlem Hatası: ${e.message}"
             )
         }
     }
